@@ -11,7 +11,6 @@ app.use(cors());
 app.use(express.json());
 
 
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@food.rfdgglw.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -29,6 +28,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("parcelDb").collection("users");
+    const parcelCollection = client.db("parcelDb").collection("parcels");
 
     // jwt related api
 
@@ -41,7 +41,7 @@ async function run() {
 
     // middlewares
     const verifyToken =(req, res, next)=>{
-      console.log('inside verify token',req.headers);
+      // console.log('inside verify token',req.headers);
       if(!req.headers.authorization){
 
         return res.status(401).send({ message: 'forbidden access'});
@@ -69,12 +69,11 @@ async function run() {
     }
 
     // users related api
-
     app.get('/users', verifyToken, verifyAdmin, async(req, res)=>{
       const result = await userCollection.find().toArray();
       res.send(result);
     })
-
+    
     app.get('/users/admin/:email',verifyToken, async(req, res)=>{
       const email = req.params.email;
       if(email !== req.decoded.email){
@@ -89,8 +88,29 @@ async function run() {
       res.send({admin});
     })
     
+    app.get('/parcels/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email: email};
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    })
+
+     app.get('/parcels', async(req, res)=>{
+      
+      const result = await parcelCollection.find().toArray();
+      res.send(result);
+    })
+
+
+    app.post('/parcels',async(req, res)=>{
+      const newParcels = req.body;
+      const result = await parcelCollection.insertOne(newParcels);
+      res.send(result);
+    })
+    
     app.post('/users', async(req,res)=>{
       const user = req.body;
+
       // insert email if user doesn't exists
       // you can do this many ways (1. email unique 2. upsert 3. simple checking)
 
@@ -111,7 +131,7 @@ async function run() {
     })
 
     // particular field update to make admin
-    app.patch('/users/admin/:id', async(req, res)=>{
+    app.patch('/users/admin/:id',verifyToken, verifyAdmin, async(req, res)=>{
       const id = req.params.id;
       const filter = { _id: new ObjectId(id)};
       const updatedDoc = {
@@ -123,7 +143,20 @@ async function run() {
       res.send(result); 
     })
 
-    app.delete('/users/:id', async(req,res)=>{
+    // make deliveryMen
+    app.patch('/users/deliveryMen/:id',verifyToken, verifyAdmin, async(req, res)=>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id)};
+      const updatedDoc = {
+        $set:{
+          role:'deliveryMen'
+        }
+      }
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result); 
+    })
+
+    app.delete('/users/:id',verifyToken, verifyAdmin, async(req,res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
       const result = await userCollection.deleteOne(query);

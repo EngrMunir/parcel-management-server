@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port =process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
@@ -73,6 +74,13 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     })
+    // sending particular user info
+    app.get('/users/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email: email};
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    })
     
     app.get('/users/admin/:email',verifyToken, async(req, res)=>{
       const email = req.params.email;
@@ -87,16 +95,59 @@ async function run() {
       }
       res.send({admin});
     })
+
+    // get delivery men api
+    // check particular user isDeliveryMen or not
+    app.get('/users/deliveryMen/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = { email:email, role: 'deliveryMen'}
+      const user = await userCollection.findOne(query);
+      if(user){
+        res.send({isDeliveryMen: true})
+        console.log(user.role)
+      }
+      else{
+        res.send({isDeliveryMen: false})
+      }
+    })
+
+    // get all delivery men data
+    app.get('/users/deliveryMen', async (req, res) => {
+      try {
+        const query = { role: 'deliveryMen' };
+        const user = await userCollection.find(query).toArray();
+        // console.log('get hitted from client');
+    
+        if (user) {
+          res.send(user.length > 0);
+          console.log('delivery men all ', user);
+        } else {
+          res.status(404).send("No delivery men found");
+        }
+      } catch (error) {
+        console.error('Error fetching delivery men:', error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+    
     
     app.get('/parcels/:email', async(req, res)=>{
       const email = req.params.email;
       const query = {email: email};
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
+    });
+
+    app.get('/parcels/update/:id', async(req, res) =>{
+      const id = req.params.id;
+      console.log('received id ',id);
+      const query ={ _id: new ObjectId(id) }
+      const result = await parcelCollection.findOne(query);
+      console.log(' update parcel result  ',result)
+      res.send(result);
     })
 
      app.get('/parcels', async(req, res)=>{
-      
       const result = await parcelCollection.find().toArray();
       res.send(result);
     })
@@ -110,9 +161,6 @@ async function run() {
     
     app.post('/users', async(req,res)=>{
       const user = req.body;
-
-      // insert email if user doesn't exists
-      // you can do this many ways (1. email unique 2. upsert 3. simple checking)
 
       const query = { email: user.email }
       const existingUser = await userCollection.findOne(query);
@@ -128,6 +176,20 @@ async function run() {
       const query = {_id: new ObjectId(id)}
       const result = await userCollection.deleteOne(query);
       res.send(result);
+    })
+    // payment intent
+    app.post('/create-payment-intent', async(req, res)=>{
+      const { price } = req.body;
+      const amount = parseInt(price*100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_type:['card']
+      });
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
 
     // particular field update to make admin

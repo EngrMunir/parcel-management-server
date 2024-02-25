@@ -11,6 +11,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@food.rfdgglw.mongodb.net/parcelDb?retryWrites=true&w=majority`;
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@food.rfdgglw.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -128,8 +129,7 @@ async function run() {
         console.error('Error fetching delivery men:', error);
         res.status(500).send("Internal Server Error");
       }
-    });
-    
+    });    
     
     app.get('/parcels/:email', async(req, res)=>{
       const email = req.params.email;
@@ -140,10 +140,10 @@ async function run() {
 
     app.get('/parcels/update/:id', async(req, res) =>{
       const id = req.params.id;
-      console.log('received id ',id);
+      // console.log('received id ',id);
       const query ={ _id: new ObjectId(id) }
       const result = await parcelCollection.findOne(query);
-      console.log(' update parcel result  ',result)
+      // console.log(' update parcel result  ',result)
       res.send(result);
     })
 
@@ -152,6 +152,13 @@ async function run() {
       res.send(result);
     })
 
+    app.patch('/parcels/:id/cancel', async(req, res)=>{
+      const id = req.params.id;
+      const { status } = req.body;
+      const query = {_id: new ObjectId(id) }
+      const updateParcel = await parcelCollection.findOneAndUpdate(query,{$set:{status}})
+      res.send(updateParcel);
+    })
 
     app.post('/parcels',async(req, res)=>{
       const newParcels = req.body;

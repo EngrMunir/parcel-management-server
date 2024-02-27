@@ -31,6 +31,7 @@ async function run() {
 
     const userCollection = client.db("parcelDb").collection("users");
     const parcelCollection = client.db("parcelDb").collection("parcels");
+    const paymentCollection = client.db("parcelDb").collection("payments");
 
     // jwt related api
 
@@ -157,6 +158,7 @@ async function run() {
       const { status } = req.body;
       const query = {_id: new ObjectId(id) }
       const updateParcel = await parcelCollection.findOneAndUpdate(query,{$set:{status}})
+      console.log(updateParcel)
       res.send(updateParcel);
     })
 
@@ -184,20 +186,24 @@ async function run() {
       const result = await userCollection.deleteOne(query);
       res.send(result);
     })
+
     // payment intent
     app.post('/create-payment-intent', async(req, res)=>{
       const { price } = req.body;
+      console.log(price,'amount inside the payment-intent')
       const amount = parseInt(price*100);
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'usd',
-        payment_method_type:['card']
+        payment_method_types:['card']
       });
       res.send({
         clientSecret: paymentIntent.client_secret
       })
     })
+
+
 
     // particular field update to make admin
     app.patch('/users/admin/:id',verifyToken, verifyAdmin, async(req, res)=>{
@@ -230,6 +236,15 @@ async function run() {
       const query = {_id: new ObjectId(id)};
       const result = await userCollection.deleteOne(query);
       res.send(result);
+    })
+
+    app.post('/payments', async(req, res)=>{
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+
+      // carefully delete each item from the parcels
+      console.log('payment info ', payment);
+      res.send(paymentResult)
     })
 
     // Send a ping to confirm a successful connection

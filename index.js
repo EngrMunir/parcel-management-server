@@ -106,7 +106,7 @@ async function run() {
       const user = await userCollection.findOne(query);
       if(user){
         res.send({isDeliveryMen: true})
-        console.log(user.role)
+        // console.log(user.role)
       }
       else{
         res.send({isDeliveryMen: false})

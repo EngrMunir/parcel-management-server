@@ -114,22 +114,11 @@ async function run() {
     })
 
     // get all delivery men data
-    app.get('/users/deliveryMen', async (req, res) => {
-      try {
-        const query = { role: 'deliveryMen' };
-        const user = await userCollection.find(query).toArray();
-        // console.log('get hitted from client');
-    
-        if (user) {
-          res.send(user.length > 0);
-          console.log('delivery men all ', user);
-        } else {
-          res.status(404).send("No delivery men found");
-        }
-      } catch (error) {
-        console.error('Error fetching delivery men:', error);
-        res.status(500).send("Internal Server Error");
-      }
+    app.get('/deliveryMen', async (req, res) => {
+        const query = { role: 'deliveryMen'};
+        const allDeliveryMen = await userCollection.find(query).toArray();
+        res.send(allDeliveryMen);
+
     });    
     
     app.get('/parcels/:email', async(req, res)=>{

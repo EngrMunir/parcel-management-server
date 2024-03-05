@@ -156,6 +156,22 @@ async function run() {
       const result = await parcelCollection.insertOne(newParcels);
       res.send(result);
     })
+
+    app.post('/parcelsUpdate', async(req, res)=>{
+      const { parcelId, deliveryMenId }= req.body;
+      const result = await parcelCollection.updateOne(
+        {_id: new ObjectId(parcelId)},
+        { $set:{ DeliveryMenId: deliveryMenId, status:'On the way'} },
+        {upsert: true}
+        );
+
+        if (result.matchedCount === 0 && result.upsertedCount === 0) {
+          console.log('parcel not found');
+            // return res.status(404).json({ message: 'Parcel not found' });
+          }
+          console.log('data updated successfully');
+    // return res.status(200).json({ message: 'Parcel updated successfully' });
+    })
     
     app.post('/users', async(req,res)=>{
       const user = req.body;

@@ -1,8 +1,9 @@
 const express = require('express')
 const app = express();
 const cors = require('cors');
+require('dotenv').config();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
 app.use(cors());
@@ -26,6 +27,79 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db('parcelDB').collection('users');
+    const parcelCollection = client.db('parcelDB').collection('parcels');
+
+    // parcels related api
+    app.get('/bookParcel',async(req,res)=>{
+      const email = req.query?.email;
+      if(email){
+        // console.log(email);
+        const query = {email:email};
+        const result = await parcelCollection.find(query).toArray();
+        // console.log(result)
+        res.send(result);
+      }
+      else{
+        const result = await parcelCollection.find().toArray();
+        res.send(result)
+      }     
+    })
+    app.get('/bookParcel/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await parcelCollection.find(query).toArray();
+      res.send(result);
+    })
+    app.post('/bookParcel',async(req, res)=>{
+      const parcel = req.body;
+      const result = await parcelCollection.insertOne(parcel)
+      res.send(result)
+      
+    })
+    // update status for parcel cancel
+    app.patch('/bookParcel/cancel',async(req, res)=>{
+      const { parcelId, status } = req.body;
+      // console.log(typeof parcelId);
+      const filter = {_id: new ObjectId(parcelId)};
+      const option = { upsert: true};
+      const updatedDoc ={
+        $set:{
+          status: status
+        }
+      }
+      const result = await parcelCollection.updateOne(filter,updatedDoc, option)
+      console.log('cancelled', result);
+      res.send(result);
+    })
+
+    // update booked parcel
+    app.patch('/bookParcel/update',async(req, res)=>{
+      const bookedParcelId = req.body.bookedParcelId;
+      const updatedData = req.body;
+      const filter = {_id: new ObjectId(bookedParcelId)}
+      const option = { upsert: true }
+      const updatedDoc ={
+        $set:{
+          name:updatedData.name,
+          email:updatedData.email,
+          phone:updatedData.phone,
+          parcelType:updatedData.parcelType,
+          parcelWeight:updatedData.parcelWeight,
+          receiverName:updatedData.receiverName,
+          receiverPhoneNumber:updatedData.receiverPhoneNumber,
+          receiverAddress:updatedData.receiverAddress,
+          requestedDeliveryDate:updatedData.requestedDeliveryDate,
+          latitude:updatedData.latitude,
+          longitude:updatedData.longitude,
+          price:updatedData.price,
+          bookingDate:updatedData.bookingDate,
+          status:updatedData.status
+        }
+      }
+      const result = await parcelCollection.updateOne(filter, updatedDoc,option)
+      console.log(result)
+      res.send(result)
+    })
 
     // users related api
     app.get('/users',async(req,res)=>{
@@ -34,6 +108,7 @@ async function run() {
     })
     app.post('/users', async(req, res)=>{
         const user = req.body;
+        // console.log(user)
         const query = { email: user.email }
         const existingUser = await userCollection.findOne(query);
         if(existingUser){
@@ -41,6 +116,17 @@ async function run() {
         }
         const result = await userCollection.insertOne(user);
         res.send(result)
+    })
+    app.patch('/users', async(req,res)=>{
+      const {id, role} = req.body;
+      const filter ={_id: new ObjectId(id)};
+      const updatedDoc={
+        $set:{
+          role:role
+        }
+      }
+      const result = await userCollection.updateOne(filter, updatedDoc);
+      res.send(result)
     })
 
     // Send a ping to confirm a successful connection

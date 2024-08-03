@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
@@ -28,6 +29,7 @@ async function run() {
 
     const userCollection = client.db('parcelDB').collection('users');
     const parcelCollection = client.db('parcelDB').collection('parcels');
+    const paymentCollection = client.db('parcelDB').collection('payments');
 
     // parcels related api
     app.get('/bookParcel',async(req,res)=>{
@@ -101,6 +103,26 @@ async function run() {
       res.send(result)
     })
 
+    // PAYMENT RELATED API
+    app.post('/create-payment-intent',async(req, res)=>{
+      const { price } = req.body;
+      console.log(price)
+      const amount = parseInt(price*100);
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount:amount,
+        currency:'usd',
+        payment_method_types:['card']
+      });
+      
+      res.send({clientSecret: paymentIntent.client_secret})
+    })
+
+    app.post('/payments',async(req, res)=>{
+      const payment = req.body;
+      console.log('payment:',payment)
+      const paymentResult = await paymentCollection.insertOne(payment)
+      res.send(paymentResult)
+    })
     // users related api
     app.get('/users',async(req,res)=>{
         const result = await userCollection.find().toArray();

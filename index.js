@@ -103,6 +103,24 @@ async function run() {
       res.send(result)
     })
 
+    // delivery men assign
+    app.patch('/assignDeliveryMen',async(req, res)=>{
+      const parcelId = req.body.parcelId;
+      const updatedData = req.body;
+      const filter = {_id: new ObjectId(parcelId)}
+      const option = { upsert: true }
+      const updatedDoc ={
+        $set:{
+          deliveryMenId:updatedData.deliveryMenId,
+          approximateDeliveryDate:updatedData.approximateDeliveryDate,
+          status:'On the way'
+        }
+      }
+      const result = await parcelCollection.updateOne(filter, updatedDoc,option)
+      console.log(result)
+      res.send(result)
+    })
+
     // PAYMENT RELATED API
     app.post('/create-payment-intent',async(req, res)=>{
       const { price } = req.body;
@@ -126,6 +144,12 @@ async function run() {
     // users related api
     app.get('/users',async(req,res)=>{
         const result = await userCollection.find().toArray();
+        res.send(result);
+    })
+    app.get('/deliveryMen',async(req,res)=>{
+        const query ={role: 'deliveryMen'}
+        const result = await userCollection.find(query).toArray();
+        console.log(result)
         res.send(result);
     })
     app.post('/users', async(req, res)=>{

@@ -31,6 +31,18 @@ async function run() {
     const parcelCollection = client.db('parcelDB').collection('parcels');
     const paymentCollection = client.db('parcelDB').collection('payments');
 
+    // my delivery list
+    app.get('/myDeliveryList',async(req, res)=>{
+      const email = req.query?.email;
+      const query = {email:email}
+      const user = await userCollection.findOne(query);
+      const deliveryMenId = user._id.toString();
+      const filter = { deliveryMenId: deliveryMenId };
+      const result = await parcelCollection.find(filter).toArray();
+      console.log(result)
+      res.send(result);     
+    })
+
     // parcels related api
     app.get('/bookParcel',async(req,res)=>{
       const email = req.query?.email;
@@ -38,7 +50,7 @@ async function run() {
         // console.log(email);
         const query = {email:email};
         const result = await parcelCollection.find(query).toArray();
-        // console.log(result)
+        // console.log(result);
         res.send(result);
       }
       else{
@@ -46,12 +58,14 @@ async function run() {
         res.send(result)
       }     
     })
+
     app.get('/bookParcel/:id',async(req,res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
       const result = await parcelCollection.find(query).toArray();
       res.send(result);
     })
+
     app.post('/bookParcel',async(req, res)=>{
       const parcel = req.body;
       const result = await parcelCollection.insertOne(parcel)
@@ -121,6 +135,14 @@ async function run() {
       res.send(result)
     })
 
+    // deliverymen get
+    app.get('/deliveryMen', async(req,res)=>{
+      const status ='deliveryMen';
+      const query = {role:status};
+      const result = await userCollection.find(query).toArray();
+      res.send(result);
+    })
+
     // PAYMENT RELATED API
     app.post('/create-payment-intent',async(req, res)=>{
       const { price } = req.body;
@@ -141,15 +163,28 @@ async function run() {
       const paymentResult = await paymentCollection.insertOne(payment)
       res.send(paymentResult)
     })
+    // 
+    
+    
     // users related api
     app.get('/users',async(req,res)=>{
-        const result = await userCollection.find().toArray();
-        res.send(result);
+        // const email = req.query?.email;
+        // console.log(id)
+        // if(email){
+        //   const query ={email:email}
+        //   const result = await userCollection.find(query).toArray();
+        //   res.send(result);
+        // }
+        // else{
+          const result = await userCollection.find().toArray();
+          res.send(result);
+        // }
     })
+    
     app.get('/deliveryMen',async(req,res)=>{
         const query ={role: 'deliveryMen'}
         const result = await userCollection.find(query).toArray();
-        console.log(result)
+        // console.log(result)
         res.send(result);
     })
     app.post('/users', async(req, res)=>{

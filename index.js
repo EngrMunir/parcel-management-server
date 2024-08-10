@@ -30,6 +30,7 @@ async function run() {
     const userCollection = client.db('parcelDB').collection('users');
     const parcelCollection = client.db('parcelDB').collection('parcels');
     const paymentCollection = client.db('parcelDB').collection('payments');
+    const feedbackCollection = client.db('parcelDB').collection('feedback');
 
     // my delivery list
     app.get('/myDeliveryList',async(req, res)=>{
@@ -163,7 +164,13 @@ async function run() {
       const paymentResult = await paymentCollection.insertOne(payment)
       res.send(paymentResult)
     })
-    // 
+
+    // feedback related api
+    app.post('/feedback', async(req,res)=>{
+      const feedback = req.body;
+      const result = await feedbackCollection.insertOne(feedback);
+      res.send(result);
+    })
     
     
     // users related api

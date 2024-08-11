@@ -138,10 +138,25 @@ async function run() {
 
     // deliverymen get
     app.get('/deliveryMen', async(req,res)=>{
-      const status ='deliveryMen';
-      const query = {role:status};
-      const result = await userCollection.find(query).toArray();
-      res.send(result);
+      // get all deliveryMen
+      const deliveryMen = await userCollection.find({role:'deliveryMen'}).toArray();
+
+      // map through each deliveryMen to gather total parcel and average parcel
+      const deliveryMenStats = await Promise.all(deliveryMen.map(async (deliveryMen)=>{
+        const deliveryMenId = deliveryMen._id.toString();
+        const parcelCount = await parcelCollection.countDocuments({deliveryMenId});
+        const reviews = await feedbackCollection.find({deliveryMenId}).toArray();
+        const averageReview = reviews.length> 0 
+        ? reviews.reduce((sum, review)=>sum+review.rating,0)/reviews.length:0;
+
+        return{
+          name: deliveryMen.name,
+          phoneNumber: deliveryMen.phoneNumber,
+          parcelCount,
+          averageReview
+        };
+      }));
+      res.send(deliveryMenStats);
     })
 
     // PAYMENT RELATED API
@@ -166,6 +181,15 @@ async function run() {
     })
 
     // feedback related api
+    app.get('/feedback',async(req,res)=>{
+      const email = req.query.email;
+      const query = {email: email}
+      const user = await userCollection.findOne(query);
+      const id = user._id.toString();
+      const filter = { deliveryMenId:id}
+      const result = await feedbackCollection.find(filter).toArray();
+      res.send(result);
+    })
     app.post('/feedback', async(req,res)=>{
       const feedback = req.body;
       const result = await feedbackCollection.insertOne(feedback);
@@ -175,17 +199,16 @@ async function run() {
     
     // users related api
     app.get('/users',async(req,res)=>{
-        // const email = req.query?.email;
-        // console.log(id)
-        // if(email){
-        //   const query ={email:email}
-        //   const result = await userCollection.find(query).toArray();
-        //   res.send(result);
-        // }
-        // else{
+        const email = req.query?.email;
+        if(email){
+          const query ={email:email}
+          const result = await userCollection.find(query).toArray();
+          res.send(result);
+        }
+        else{
           const result = await userCollection.find().toArray();
           res.send(result);
-        // }
+        }
     })
     
     app.get('/deliveryMen',async(req,res)=>{

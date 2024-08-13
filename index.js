@@ -195,9 +195,14 @@ async function run() {
                   $match: { role: 'deliveryMen' } // Filter only delivery men
               },
               {
+                $addFields:{
+                  stringId:{  $toString:'$_id'  }
+                }
+              },
+              {
                   $lookup: {
                       from: 'parcels',
-                      localField: '_id',
+                      localField: 'stringId',
                       foreignField: 'deliveryMenId',
                       as: 'parcels'
                   }
@@ -205,7 +210,7 @@ async function run() {
               {
                   $lookup: {
                       from: 'feedback',
-                      localField: '_id',
+                      localField: 'stringId',
                       foreignField: 'deliveryMenId',
                       as: 'reviews'
                   }
@@ -240,7 +245,7 @@ async function run() {
                   }
               }
           ]).toArray();
-          console.log(deliveryMen);
+          // console.log(deliveryMen);
           res.send(deliveryMen);
   });
   
@@ -284,10 +289,44 @@ async function run() {
       res.send(result);
     })
     
-    
+    // chart data
+    app.get('/chartData',async(req,res)=>{
+      const bookingData = await parcelCollection.aggregate([
+        {
+          $addFields: {
+            // Convert the string date to a MongoDB Date object
+            bookingDate: { 
+              $dateFromString: { dateString: "$bookingDate" } 
+            }
+          }
+        },
+        {
+          $group:{
+            _id:{ $dateToString:{format: "%Y-%m-%d", date: "$bookingDate"}},
+            bookingCount: {$sum:1}
+          }
+        },
+        {
+          $limit:6
+        },
+        {
+          $sort:{_id:1}
+        },
+        {
+          $project: {
+              _id: 0,
+              date: "$_id",
+              bookingCount: 1
+          }
+      }
+      ]).toArray();
+      res.send(bookingData);
+    })
+
     // users related api
-    app.get('/users',verifyToken,async(req,res)=>{
+    app.get('/users',async(req,res)=>{
         const email = req.query?.email;
+        console.log(email)
         if(email){
           const query ={email:email}
           const result = await userCollection.find(query).toArray();
@@ -329,8 +368,8 @@ async function run() {
     })
 
     // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();

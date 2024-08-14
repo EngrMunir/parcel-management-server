@@ -8,7 +8,15 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://parcel-management-f16f3.web.app",
+      "https://parcel-management-f16f3.firebaseapp.com",
+    ]
+  })
+);
 app.use(express.json());
 
 
@@ -26,7 +34,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    await client.connect();
 
     const userCollection = client.db('parcelDB').collection('users');
     const parcelCollection = client.db('parcelDB').collection('parcels');
@@ -162,11 +170,13 @@ async function run() {
     })
 
     // deliverymen get
-    app.get('/allDeliveryMen', async(req,res)=>{
-      const deliveryMen = await userCollection.find({role:'deliveryMen'}).toArray();
-      res.send(deliveryMen);
-    })
-    app.get('/deliveryMen', async(req,res)=>{
+    app.get('/deliveryMen',verifyToken,async(req,res)=>{
+      const query ={role: 'deliveryMen'}
+      const result = await userCollection.find(query).toArray();
+      // console.log(result)
+      res.send(result);
+  })
+    app.get('/deliveryMenStat',verifyToken, async(req,res)=>{
       // get all deliveryMen
       const deliveryMen = await userCollection.find({role:'deliveryMen'}).toArray();
       // console.log(deliveryMen)
@@ -338,12 +348,6 @@ async function run() {
         }
     })
     
-    app.get('/deliveryMen',async(req,res)=>{
-        const query ={role: 'deliveryMen'}
-        const result = await userCollection.find(query).toArray();
-        // console.log(result)
-        res.send(result);
-    })
     app.post('/users', async(req, res)=>{
         const user = req.body;
         // console.log(user)
